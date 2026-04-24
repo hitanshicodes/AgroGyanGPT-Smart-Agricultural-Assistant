@@ -231,7 +231,7 @@ async function sendRegistrationOtp(isResend = false) {
                 : (typeof t === "function" ? t("otpSent") : "OTP sent.");
             const otpInstruction = typeof t === "function"
                 ? t("otpInstruction")
-                : "Check your phone and enter the 6-digit code.";
+                : "Check your email and enter the 6-digit code.";
             setRegisterMessage(`${resendText} ${otpInstruction}${debugOtpNote}`);
             const otpInput = document.getElementById("regOtp");
             if (otpInput) otpInput.focus();

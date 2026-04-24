@@ -144,8 +144,7 @@
             <div>
                 <label class="visually-hidden" for="regOtpChannel">OTP channel</label>
                 <select id="regOtpChannel" aria-label="OTP channel">
-                    <option value="sms" data-i18n="smsOtp">SMS OTP</option>
-                    <option value="whatsapp" data-i18n="whatsappOtp">WhatsApp OTP</option>
+                    <option value="email" selected>Email OTP</option>
                 </select>
             </div>
             <div>
@@ -165,7 +164,7 @@
                 <span class="btn-spinner hidden" aria-hidden="true"></span>
             </button>
         </div>
-        <p class="small-note" data-i18n="otpFlowNote">Choose SMS or WhatsApp, receive OTP on your phone, then verify to create the account.</p>
+        <p class="small-note" data-i18n="otpFlowNote">Click "Send OTP" to receive a verification code on your email, then enter it to create your account.</p>
         <button id="resendOtpButton" class="nav-btn" onclick="sendRegistrationOtp(true)" type="button" data-i18n="resendOtp">Resend OTP</button>
         <p class="login-switch">
             <span data-i18n="hasAccountPrompt">Already have an account?</span>
