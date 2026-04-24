@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Farmer Community</title>
+    <link rel="stylesheet" href="style.css">
+    <script defer src="ui.js"></script>
+    <script defer src="api-config.js"></script>
+    <script defer src="i18n.js"></script>
+</head>
+<body>
+<div class="page-shell">
+    <header class="top-bar">
+        <div class="brand-left">
+            <div class="brand-mark" data-i18n="communityTitle">Farmer Community</div>
+            <div id="welcomeUser" class="welcome-text"></div>
+        </div>
+
+        <div class="top-actions">
+            <select id="uiLanguage" class="lang-select" aria-label="UI Language">
+                <option value="English">English</option>
+                <option value="Hindi">Hindi</option>
+                <option value="Marathi">Marathi</option>
+            </select>
+            <button id="themeButton" class="nav-btn" onclick="toggleTheme()" type="button">Theme</button>
+            <button class="nav-btn" onclick="goHome()" data-i18n="home" type="button">Home</button>
+            <button class="nav-btn" onclick="goToMyFarm()" type="button">My Farm</button>
+            <button class="nav-btn" onclick="goToCropCare()" type="button">Crop Care</button>
+            <button class="nav-btn" onclick="goToMarket()" type="button">Market</button>
+            <button class="nav-btn" onclick="goToSchemes()" data-i18n="schemes" type="button">Schemes</button>
+            <button class="nav-btn" onclick="goToProfile()" data-i18n="profile" type="button">Profile</button>
+            <button id="authButton" class="nav-btn" type="button"></button>
+        </div>
+    </header>
+
+    <section class="hero-panel">
+        <div class="hero-copy">
+            <p class="eyebrow">Grow together</p>
+            <h1 class="main-title">Farmer Community</h1>
+            <p class="subtitle">Share field observations, ask for crop advice, react to others, and keep practical farming conversations moving in a calmer, cleaner space.</p>
+            <div class="hero-stats">
+                <div class="stat-card">
+                    <span class="stat-label">Post style</span>
+                    <span class="stat-value">Quick updates</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">Best for</span>
+                    <span class="stat-value">Peer support</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">Flow</span>
+                    <span class="stat-value">Searchable</span>
+                </div>
+            </div>
+        </div>
+
+        <aside class="hero-side">
+            <div class="forecast-card">
+                <span class="meta-label">Community energy</span>
+                <div class="forecast-temp">Live</div>
+                <div style="font-size: 1.1rem; font-weight: 700;">Ask, react, reply</div>
+                <p class="subnote" style="color: rgba(255, 244, 207, 0.78); margin-top: 10px;">Use this page for practical field experience while the dashboard handles document answers.</p>
+            </div>
+        </aside>
+    </section>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+    <div id="tourOverlay" class="tour-overlay hidden">
+        <div class="tour-card">
+            <h3 id="tourTitle" data-i18n="tourWelcome">Welcome!</h3>
+            <p id="tourText" data-i18n="tourText">Let's walk through the community features.</p>
+            <div class="tour-buttons">
+                <button id="tourNext" class="primary-btn" data-i18n="tourNext" type="button">Next</button>
+                <button id="tourSkip" class="nav-btn" data-i18n="tourSkip" type="button">Skip</button>
+            </div>
+        </div>
+    </div>
+
+    <main class="community-container">
+        <section class="post-box">
+            <div class="section-header">
+                <div>
+                    <p class="eyebrow">New conversation</p>
+                    <h2 class="section-title">Post to the community</h2>
+                </div>
+            </div>
+            <textarea id="postContent" data-i18n-placeholder="communityPostPlaceholder" placeholder="Ask something to the community..."></textarea>
+            <button class="primary-btn" onclick="createPost()" data-i18n="communityPostButton" type="button">Post</button>
+        </section>
+
+        <section class="post-box">
+            <div class="search-bar">
+                <input id="postSearch" data-i18n-placeholder="communitySearchPlaceholder" placeholder="Search community posts...">
+                <button class="primary-btn" onclick="searchPosts()" data-i18n="communitySearchButton" type="button">Search</button>
+            </div>
+            <div id="communityStatus" class="small-note" style="margin-top: 14px;"></div>
+        </section>
+
+        <div id="postsContainer"></div>
+
+        <div id="loadMoreWrapper" style="text-align: center;">
+            <button id="loadMoreBtn" class="primary-btn" onclick="loadMorePosts()" data-i18n="communityLoadMore" type="button">Load more</button>
+        </div>
+    </main>
+</div>
+
+<div class="mobile-actions">
+    <button class="nav-btn" onclick="createPost()" data-i18n="communityNewPost" type="button">+ New post</button>
+    <button class="nav-btn" onclick="loadPosts({ reset: true })" data-i18n="communityRefresh" type="button">Refresh</button>
+</div>
+
+<script>
+const API = window.AGRO_API_URL || "http://127.0.0.1:8000";
+const PAGE_SIZE = 6;
+
+let postOffset = 0;
+let currentSearch = "";
+let currentUserId = null;
+let tourStepIndex = 0;
+
+function setTheme(theme) {
+    document.body.classList.toggle("dark-mode", theme === "dark");
+    localStorage.setItem("theme", theme);
+    const themeButton = document.getElementById("themeButton");
+    if (themeButton) {
+        themeButton.innerText = theme === "dark" ? t("light") : t("dark");
+    }
+}
+
+function toggleTheme() {
+    const active = document.body.classList.contains("dark-mode") ? "dark" : "light";
+    setTheme(active === "dark" ? "light" : "dark");
+}
+
+function showToast(message, type = "success", duration = 3200) {
+    const toast = document.getElementById("toast");
+    if (!toast) return;
+
+    toast.className = `toast show ${type}`;
+    toast.innerText = message;
+
+    clearTimeout(toast.dismissId);
+    toast.dismissId = setTimeout(() => {
+        toast.className = "toast";
+    }, duration);
+}
+
+function getTourSteps() {
+    return [
+        { titleKey: "tourStep1Title", textKey: "tourStep1Text" },
+        { titleKey: "tourStep2Title", textKey: "tourStep2Text" },
+        { titleKey: "tourStep3Title", textKey: "tourStep3Text" },
+        { titleKey: "tourStep4Title", textKey: "tourStep4Text" }
+    ];
+}
+
+function showTourStep(index) {
+    const overlay = document.getElementById("tourOverlay");
+    const title = document.getElementById("tourTitle");
+    const text = document.getElementById("tourText");
+    if (!overlay || !title || !text) return;
+
+    const step = getTourSteps()[index];
+    if (!step) {
+        endTour();
+        return;
+    }
+
+    title.innerText = t(step.titleKey);
+    text.innerText = t(step.textKey);
+    overlay.classList.remove("hidden");
+}
+
+function nextTourStep() {
+    tourStepIndex += 1;
+    if (tourStepIndex >= getTourSteps().length) {
+        endTour();
+        return;
+    }
+    showTourStep(tourStepIndex);
+}
+
+function endTour() {
+    const overlay = document.getElementById("tourOverlay");
+    if (overlay) {
+        overlay.classList.add("hidden");
+    }
+    localStorage.setItem("communityTourSeen", "1");
+}
+
+function maybeStartTour() {
+    if (localStorage.getItem("communityTourSeen")) return;
+    tourStepIndex = 0;
+    showTourStep(0);
+}
+
+function showLoadingSkeleton(count = 3) {
+    const container = document.getElementById("postsContainer");
+    container.innerHTML = "";
+
+    for (let i = 0; i < count; i += 1) {
+        const card = document.createElement("div");
+        card.className = "post-card skeleton";
+        card.innerHTML = `
+            <div class="skeleton-line skeleton-title"></div>
+            <div class="skeleton-line skeleton-meta"></div>
+            <div class="skeleton-line"></div>
+            <div class="skeleton-line"></div>
+            <div class="skeleton-line skeleton-action"></div>
+        `;
+        container.appendChild(card);
+    }
+}
+
+async function createPost() {
+    const content = document.getElementById("postContent").value.trim();
+    if (!content) {
+        alert(t("writeSomethingFirst"));
+        return;
+    }
+
+    if (!currentUserId) {
+        showToast(t("pleaseLoginToPost") || "Please login to post.", "error");
+        return;
+    }
+
+    try {
+        const res = await fetch(API + "/community/create-post", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ content, user_id: currentUserId })
+        });
+
+        const data = await res.json().catch(() => null);
+        if (!res.ok) {
+            showToast(data?.message || t("unableToPost"), "error");
+            return;
+        }
+
+        document.getElementById("postContent").value = "";
+        const searchInput = document.getElementById("postSearch");
+        if (searchInput) {
+            searchInput.value = "";
+        }
+        currentSearch = "";
+
+        await loadPosts({ reset: true });
+        showToast(t("postedSuccess"));
+        window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch (err) {
+        showToast(t("unableToPost"), "error");
+        console.error("createPost error", err);
+    }
+}
+
+async function loadPosts({ reset = true } = {}) {
+    const statusEl = document.getElementById("communityStatus");
+    const container = document.getElementById("postsContainer");
+
+    if (reset) {
+        postOffset = 0;
+        if (statusEl) statusEl.innerText = t("loadingPosts");
+        showLoadingSkeleton();
+    }
+
+    const params = new URLSearchParams({
+        limit: PAGE_SIZE.toString(),
+        offset: postOffset.toString()
+    });
+    if (currentSearch) {
+        params.set("search", currentSearch);
+    }
+
+    let posts = [];
+    try {
+        const res = await fetch(API + "/community/posts?" + params.toString());
+        const json = await res.json();
+        if (!Array.isArray(json)) {
+            container.innerHTML = `<div class="post-box">Error loading posts</div>`;
+            return;
+        }
+        posts = json;
+    } catch (err) {
+        if (statusEl) statusEl.innerText = t("unableToLoadPosts");
+        showToast(t("unableToLoadPosts"), "error");
+        console.error("loadPosts error", err);
+        container.innerHTML = `<div class="post-box">${t("unableToLoadPosts")}</div>`;
+        return;
+    }
+
+    if (reset) {
+        container.innerHTML = "";
+    }
+
+    if (reset && posts.length === 0) {
+        container.innerHTML = `<div class="post-box">${t("noPostsYet")}</div>`;
+        if (statusEl) statusEl.innerText = t("noPostsYet");
+        return;
+    }
+
+    for (const post of posts) {
+        try {
+            const commentRes = await fetch(API + "/community/comments/" + post.id);
+            const comments = await commentRes.json();
+
+            const postDiv = document.createElement("div");
+            postDiv.className = "post-card";
+
+            const reactionButtons = [
+                { emoji: "❤️", key: "heart" },
+                { emoji: "😂", key: "laugh" },
+                { emoji: "🌾", key: "farm" },
+                { emoji: "💡", key: "idea" },
+                { emoji: "🙏", key: "thanks" }
+            ].map((item) => {
+                const count = (post.reactions && post.reactions[item.key]) || 0;
+                return `<button class="reaction-btn" type="button" onclick="addReaction(${post.id}, '${item.key}')">${item.emoji} ${count}</button>`;
+            }).join("");
+
+            const isOwner = post.user_id && currentUserId && String(post.user_id) === String(currentUserId);
+            const ownerActions = isOwner ? `
+                <button class="nav-btn" type="button" onclick="editPost(${post.id})">Edit</button>
+                <button class="nav-btn" type="button" onclick="deletePost(${post.id})">Delete</button>
+            ` : "";
+
+            postDiv.innerHTML = `
+                <div class="post-header">
+                    <div class="avatar">F</div>
+                    <div class="post-body">
+                        <div class="post-content" id="post-content-${post.id}">${post.content}</div>
+                        <div class="post-meta">
+                            Posted by <strong>${post.user_name || "Farmer"}</strong>
+                            - ${new Date(post.timestamp).toLocaleString()}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="post-actions">
+                    <button class="nav-btn" type="button" onclick="likePost(${post.id})">Like ${post.likes || 0}</button>
+                    <button class="nav-btn" type="button" onclick="dislikePost(${post.id})">Skip ${post.dislikes || 0}</button>
+                    ${reactionButtons}
+                    ${ownerActions}
+                </div>
+
+                <div class="comment">
+                    <input type="text" id="comment-${post.id}" placeholder="Write reply">
+                    <button class="primary-btn" type="button" onclick="addComment(${post.id})">Reply</button>
+                </div>
+
+                <div id="comments-${post.id}">
+                    ${Array.isArray(comments) ? comments.map(c => `<div class="comment"><strong>${c.user_name || "Guest"}:</strong> ${c.text}</div>`).join("") : ""}
+                </div>
+            `;
+
+            container.appendChild(postDiv);
+        } catch (postErr) {
+            console.error("Error rendering post", post, postErr);
+        }
+    }
+
+    if (statusEl) {
+        statusEl.innerText = `${posts.length} posts loaded`;
+    }
+
+    const loadMoreBtn = document.getElementById("loadMoreBtn");
+    if (loadMoreBtn) {
+        loadMoreBtn.style.display = posts.length < PAGE_SIZE ? "none" : "inline-flex";
+    }
+}
+
+async function loadMorePosts() {
+    postOffset += PAGE_SIZE;
+    await loadPosts({ reset: false });
+}
+
+async function searchPosts() {
+    currentSearch = document.getElementById("postSearch").value.trim();
+    await loadPosts({ reset: true });
+}
+
+async function addReaction(postId, emoji) {
+    try {
+        await fetch(API + "/community/react", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ post_id: postId, emoji })
+        });
+        showToast(t("reactedWithEmoji").replace("{emoji}", emoji));
+        loadPosts({ reset: true });
+    } catch (err) {
+        showToast(t("unableToReact"), "error");
+        console.error("addReaction error", err);
+    }
+}
+
+async function likePost(id) {
+    try {
+        await fetch(API + "/community/like/" + id, { method: "POST" });
+        showToast(t("liked"));
+        loadPosts({ reset: true });
+    } catch (err) {
+        showToast(t("unableToLike"), "error");
+    }
+}
+
+async function dislikePost(id) {
+    try {
+        await fetch(API + "/community/dislike/" + id, { method: "POST" });
+        showToast(t("disliked"), "error");
+        loadPosts({ reset: true });
+    } catch (err) {
+        showToast(t("unableToDislike"), "error");
+    }
+}
+
+async function addComment(id) {
+    const text = document.getElementById("comment-" + id).value.trim();
+    if (!text) return;
+
+    try {
+        await fetch(API + "/community/comment", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ post_id: id, user_id: currentUserId || 1, text })
+        });
+        showToast(t("repliedToPost"));
+        loadPosts({ reset: true });
+    } catch (err) {
+        showToast(t("unableToAddComment"), "error");
+    }
+}
+
+async function editPost(postId) {
+    const current = document.getElementById(`post-content-${postId}`)?.innerText || "";
+    const updated = prompt(t("editPostPrompt"), current);
+    if (updated === null || updated.trim() === "") return;
+
+    await fetch(API + "/community/post", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ post_id: postId, user_id: currentUserId, content: updated })
+    });
+
+    loadPosts({ reset: true });
+    showToast(t("postUpdated"));
+}
+
+async function deletePost(postId) {
+    if (!confirm(t("deletePostConfirm"))) return;
+
+    await fetch(API + "/community/post", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ post_id: postId, user_id: currentUserId })
+    });
+
+    loadPosts({ reset: true });
+    showToast(t("postRemoved"), "error");
+}
+
+function updateAuthButtons() {
+    const user = localStorage.getItem("user");
+    currentUserId = parseInt(localStorage.getItem("userId"), 10);
+
+    const authButton = document.getElementById("authButton");
+    const welcomeUser = document.getElementById("welcomeUser");
+    const postButton = document.querySelector(".post-box .primary-btn");
+
+    if (user) {
+        welcomeUser.innerText = t("welcomeUserPrefix") + user;
+        authButton.innerText = t("logout");
+        authButton.onclick = () => {
+            if (confirm(t("confirmLogout"))) {
+                localStorage.removeItem("user");
+                localStorage.removeItem("userId");
+                window.location.href = "login.html";
+            }
+        };
+        if (postButton) postButton.disabled = false;
+    } else {
+        welcomeUser.innerText = "";
+        authButton.innerText = t("login");
+        authButton.onclick = () => {
+            window.location.href = "login.html";
+        };
+        if (postButton) postButton.disabled = true;
+    }
+}
+
+function goHome() {
+    window.location.href = "index.html";
+}
+
+function goToSchemes() {
+    window.location.href = "schemes.html";
+}
+
+function goToMyFarm() {
+    window.location.href = "my-farm.html";
+}
+
+function goToCropCare() {
+    window.location.href = "crop-care.html";
+}
+
+function goToMarket() {
+    window.location.href = "market.html";
+}
+
+function goToProfile() {
+    window.location.href = "profile.html";
+}
+
+if (typeof initI18n === "function") {
+    initI18n();
+}
+setTheme(localStorage.getItem("theme") || "light");
+updateAuthButtons();
+loadPosts({ reset: true }).then(() => maybeStartTour());
+
+const tourNextBtn = document.getElementById("tourNext");
+const tourSkipBtn = document.getElementById("tourSkip");
+if (tourNextBtn) tourNextBtn.addEventListener("click", nextTourStep);
+if (tourSkipBtn) tourSkipBtn.addEventListener("click", endTour);
+</script>
+</body>
+</html>

@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Government Schemes</title>
+<link rel="stylesheet" href="style.css">
+<script defer src="ui.js"></script>
+<script defer src="i18n.js"></script>
+</head>
+<body>
+<div class="page-shell">
+    <header class="top-bar">
+        <div class="brand-left">
+            <div class="brand-mark" data-i18n="appName">AgroGyanGPT</div>
+            <div id="welcomeUser" class="welcome-text"></div>
+        </div>
+
+        <div class="top-actions">
+            <select id="uiLanguage" class="lang-select" aria-label="UI Language">
+                <option value="English">English</option>
+                <option value="Hindi">Hindi</option>
+                <option value="Marathi">Marathi</option>
+            </select>
+            <button id="themeButton" class="nav-btn" onclick="toggleTheme()" type="button" data-i18n="theme">Theme</button>
+            <button class="nav-btn" onclick="goHome()" data-i18n="home" type="button">Home</button>
+            <button class="nav-btn" onclick="goToMyFarm()" type="button" data-i18n="myFarm">My Farm</button>
+            <button class="nav-btn" onclick="goToCropCare()" type="button" data-i18n="cropCare">Crop Care</button>
+            <button class="nav-btn" onclick="goToMarket()" type="button" data-i18n="market">Market</button>
+            <button class="nav-btn" onclick="goToCommunity()" data-i18n="connectFarmers" type="button">Community</button>
+            <button class="nav-btn" onclick="goToProfile()" data-i18n="profile" type="button">Profile</button>
+            <button class="nav-btn" onclick="logout()" data-i18n="logout" type="button">Logout</button>
+        </div>
+    </header>
+
+    <section class="hero-panel">
+        <div class="hero-copy">
+            <p class="eyebrow">Support navigator</p>
+            <h1 class="main-title" data-i18n="schemes">Government Schemes</h1>
+            <p class="subtitle" data-i18n="schemesSubtitle">Explore important agricultural schemes</p>
+            <div class="hero-stats">
+                <div class="stat-card">
+                    <span class="stat-label">Browse faster</span>
+                    <span class="stat-value">Category tabs</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">Save later</span>
+                    <span class="stat-value">Favorites</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">Best use</span>
+                    <span class="stat-value">Benefit discovery</span>
+                </div>
+            </div>
+        </div>
+
+        <aside class="hero-side">
+            <div class="forecast-card">
+                <span class="meta-label">Explore smarter</span>
+                <div class="forecast-temp">10</div>
+                <div style="font-size: 1.1rem; font-weight: 700;">Key schemes preloaded</div>
+                <p class="subnote" style="color: rgba(255, 244, 207, 0.78); margin-top: 10px;">Use favorites to build your shortlist before applying on official portals.</p>
+            </div>
+        </aside>
+    </section>
+
+    <main class="community-container">
+        <section class="post-box">
+            <div class="scheme-toolbar">
+                <div>
+                    <p class="eyebrow">Filter view</p>
+                    <h2 class="section-title">Scheme categories</h2>
+                </div>
+            </div>
+
+            <div class="scheme-tabs">
+                <button class="tab-btn active" data-category="all" onclick="setSchemeTab('all')" data-i18n="tabAll" type="button">All</button>
+                <button class="tab-btn" data-category="income" onclick="setSchemeTab('income')" data-i18n="tabIncome" type="button">Income</button>
+                <button class="tab-btn" data-category="insurance" onclick="setSchemeTab('insurance')" data-i18n="tabInsurance" type="button">Insurance</button>
+                <button class="tab-btn" data-category="loan" onclick="setSchemeTab('loan')" data-i18n="tabLoans" type="button">Loans</button>
+                <button class="tab-btn" data-category="irrigation" onclick="setSchemeTab('irrigation')" data-i18n="tabIrrigation" type="button">Irrigation</button>
+                <button class="tab-btn" data-category="tech" onclick="setSchemeTab('tech')" data-i18n="tabTech" type="button">Tech</button>
+                <button class="tab-btn" data-category="favorites" onclick="setSchemeTab('favorites')" data-i18n="tabFavorites" type="button">Favorites</button>
+            </div>
+        </section>
+
+        <section class="market-board">
+            <div id="schemeList" class="scheme-grid"></div>
+        </section>
+
+        <section class="dashboard-widgets">
+            <div class="timeline-card">
+                <p class="eyebrow" data-i18n="schemeEligibility">Scheme eligibility</p>
+                <h3 data-i18n="schemeEligibility">Scheme eligibility</h3>
+                <div id="eligibilitySummary" class="timeline-list"></div>
+            </div>
+            <div class="timeline-card">
+                <p class="eyebrow" data-i18n="documentChecklist">Document checklist</p>
+                <h3 data-i18n="documentChecklist">Document checklist</h3>
+                <div id="documentChecklist" class="timeline-list"></div>
+            </div>
+        </section>
+    </main>
+</div>
+
+<script>
+const schemes = [
+    { name: "PM-KISAN", category: "income", benefit: "Rs 6000 yearly support to farmers", link: "https://pmkisan.gov.in" },
+    { name: "PM Kisan Maandhan", category: "income", benefit: "Pension support for small and marginal farmers", link: "https://maandhan.in" },
+    { name: "PM Fasal Bima Yojana", category: "insurance", benefit: "Crop insurance protection against major losses", link: "https://pmfby.gov.in" },
+    { name: "Weather Based Crop Insurance", category: "insurance", benefit: "Insurance support linked to weather conditions", link: "https://pmfby.gov.in" },
+    { name: "Kisan Credit Card", category: "loan", benefit: "Low-interest working capital for farm needs", link: "https://www.myscheme.gov.in/schemes/kcc" },
+    { name: "Agriculture Infrastructure Fund", category: "loan", benefit: "Funding support for agri infrastructure projects", link: "https://agriinfra.dac.gov.in" },
+    { name: "PM Krishi Sinchai Yojana", category: "irrigation", benefit: "Improves irrigation access and water use efficiency", link: "https://pmksy.gov.in" },
+    { name: "PM-KUSUM", category: "irrigation", benefit: "Solar pump support for agriculture", link: "https://pmkusum.mnre.gov.in" },
+    { name: "Soil Health Card", category: "tech", benefit: "Helps understand soil nutrients and improve yield planning", link: "https://soilhealth.dac.gov.in" },
+    { name: "e-NAM", category: "tech", benefit: "Digital agricultural market access across mandis", link: "https://enam.gov.in" }
+];
+
+function pageText(key) {
+    const lang = typeof getUILanguage === "function" ? getUILanguage() : "English";
+    const copy = {
+        English: {
+            eligible: "Likely eligible",
+            checkDocs: "Check documents",
+            completeProfile: "Complete your farm profile for stronger scheme matching.",
+            aadhaar: "Aadhaar card",
+            bank: "Bank passbook",
+            land: "Land record / 7-12 extract",
+            mobile: "Registered mobile number",
+            crop: "Crop details and sowing proof",
+            noSchemesFound: "No schemes found for this category.",
+            starred: "Starred",
+            star: "Star"
+        },
+        Hindi: {
+            eligible: "संभावित रूप से पात्र",
+            checkDocs: "दस्तावेज़ जाँचें",
+            completeProfile: "बेहतर योजना मिलान के लिए खेत प्रोफ़ाइल पूरी करें।",
+            aadhaar: "आधार कार्ड",
+            bank: "बैंक पासबुक",
+            land: "भूमि रिकॉर्ड / 7-12",
+            mobile: "पंजीकृत मोबाइल नंबर",
+            crop: "फसल विवरण और बुवाई प्रमाण",
+            noSchemesFound: "इस श्रेणी के लिए कोई योजना नहीं मिली।",
+            starred: "सहेजी गई",
+            star: "सहेजें"
+        },
+        Marathi: {
+            eligible: "बहुधा पात्र",
+            checkDocs: "कागदपत्रे तपासा",
+            completeProfile: "चांगल्या योजना जुळणीसाठी शेत प्रोफाइल पूर्ण करा.",
+            aadhaar: "आधार कार्ड",
+            bank: "बँक पासबुक",
+            land: "जमिनीचा उतारा / 7-12",
+            mobile: "नोंदणीकृत मोबाईल नंबर",
+            crop: "पीक तपशील आणि पेरणी पुरावा",
+            noSchemesFound: "या वर्गासाठी कोणतीही योजना सापडली नाही.",
+            starred: "सेव्ह",
+            star: "सेव्ह करा"
+        }
+    };
+    return copy[lang]?.[key] || copy.English[key] || key;
+}
+
+function getFavoriteSchemes() {
+    return JSON.parse(localStorage.getItem("favoriteSchemes") || "[]");
+}
+
+function toggleFavorite(schemeName) {
+    const current = getFavoriteSchemes();
+    const index = current.indexOf(schemeName);
+    if (index >= 0) {
+        current.splice(index, 1);
+    } else {
+        current.push(schemeName);
+    }
+    localStorage.setItem("favoriteSchemes", JSON.stringify(current));
+    renderSchemes(currentTab);
+}
+
+function isFavorite(schemeName) {
+    return getFavoriteSchemes().includes(schemeName);
+}
+
+let currentTab = "all";
+
+function setSchemeTab(tab) {
+    currentTab = tab;
+    document.querySelectorAll(".tab-btn").forEach(btn => {
+        btn.classList.toggle("active", btn.getAttribute("data-category") === tab);
+    });
+    renderSchemes(tab);
+}
+
+function createCard(scheme) {
+    const favorited = isFavorite(scheme.name);
+
+    return `
+    <div class="scheme-card">
+        <div class="scheme-card-header">
+            <h3>${scheme.name}</h3>
+            <button class="favorite-btn" aria-label="Toggle favorite" onclick="toggleFavorite('${scheme.name}')" type="button">
+                ${favorited ? pageText("starred") : pageText("star")}
+            </button>
+        </div>
+        <p>${scheme.benefit}</p>
+        <div class="scheme-actions">
+            <a href="${scheme.link}" target="_blank" rel="noreferrer">
+                <button class="primary-btn" type="button">${t("applyLearnMore") || "Apply / Learn more"}</button>
+            </a>
+        </div>
+    </div>
+    `;
+}
+
+function renderSchemes(tab) {
+    const container = document.getElementById("schemeList");
+
+    let filtered = schemes;
+    if (tab && tab !== "all") {
+        if (tab === "favorites") {
+            const favorites = getFavoriteSchemes();
+            filtered = schemes.filter(s => favorites.includes(s.name));
+        } else {
+            filtered = schemes.filter(s => s.category === tab);
+        }
+    }
+
+    if (filtered.length === 0) {
+        container.innerHTML = `<div class="post-box">${pageText("noSchemesFound")}</div>`;
+        return;
+    }
+
+    container.innerHTML = filtered.map(createCard).join("");
+}
+
+function setTheme(theme) {
+    document.body.classList.toggle("dark-mode", theme === "dark");
+    localStorage.setItem("theme", theme);
+    const themeButton = document.getElementById("themeButton");
+    if (themeButton) {
+        themeButton.innerText = theme === "dark" ? t("light") : t("dark");
+    }
+}
+
+function toggleTheme() {
+    const active = document.body.classList.contains("dark-mode") ? "dark" : "light";
+    setTheme(active === "dark" ? "light" : "dark");
+}
+
+if (typeof initI18n === "function") {
+    initI18n();
+}
+setTheme(localStorage.getItem("theme") || "light");
+renderSchemes(currentTab);
+renderEligibilityDesk();
+
+const currentUser = localStorage.getItem("user");
+if (!currentUser) {
+    window.location.href = "login.html";
+}
+
+const welcomeUser = document.getElementById("welcomeUser");
+if (welcomeUser) {
+    welcomeUser.innerText = currentUser ? t("welcomeUserPrefix") + currentUser : "";
+}
+
+function goHome() {
+    window.location.href = "index.html";
+}
+
+function goToCommunity() {
+    window.location.href = "community.html";
+}
+
+function goToMyFarm() {
+    window.location.href = "my-farm.html";
+}
+
+function goToCropCare() {
+    window.location.href = "crop-care.html";
+}
+
+function goToMarket() {
+    window.location.href = "market.html";
+}
+
+function goToProfile() {
+    window.location.href = "profile.html";
+}
+
+function logout() {
+    if (confirm(t("confirmLogout"))) {
+        localStorage.removeItem("user");
+        localStorage.removeItem("userId");
+        window.location.href = "login.html";
+    }
+}
+
+function renderEligibilityDesk() {
+    const eligibilitySummary = document.getElementById("eligibilitySummary");
+    const documentChecklist = document.getElementById("documentChecklist");
+    const crop = localStorage.getItem("crop_name");
+    const land = localStorage.getItem("land_size");
+    const items = [];
+    if (crop) items.push(`PM-KISAN: ${pageText("eligible")}`);
+    if (land) items.push(`Kisan Credit Card: ${pageText("eligible")}`);
+    if (crop && localStorage.getItem("season")) items.push(`PM Fasal Bima Yojana: ${pageText("eligible")}`);
+    if (!items.length) items.push(pageText("completeProfile"));
+    if (eligibilitySummary) {
+        eligibilitySummary.innerHTML = items.map(item => `<div class="timeline-item"><p>${item}</p></div>`).join("");
+    }
+    if (documentChecklist) {
+        documentChecklist.innerHTML = "";
+        [pageText("aadhaar"), pageText("bank"), pageText("land"), pageText("mobile"), pageText("crop")]
+            .forEach((item) => {
+                documentChecklist.insertAdjacentHTML("beforeend", `<div class="timeline-item"><p>${item}</p></div>`);
+            });
+    }
+}
+
+window.addEventListener("ui-language-changed", () => {
+    renderSchemes(currentTab);
+    renderEligibilityDesk();
+});
+</script>
+</body>
+</html>
