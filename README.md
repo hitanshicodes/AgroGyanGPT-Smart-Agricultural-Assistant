@@ -1,4 +1,5 @@
 🌱 AgroGyanGPT – Smart Agricultural Assistant 
+Render: https://agrogyangpt-smart-agricultural-assistant.onrender.com
 
 AgroGyanGPT is an AI-powered agricultural assistant designed to provide farmers with reliable, data-driven insights to improve decision-making.
 
