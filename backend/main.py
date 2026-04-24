@@ -449,20 +449,68 @@ def ensure_seed_operating_data(db: Session, user: User | None) -> None:
     db.commit()
 
 
-def send_otp_via_provider(phone_number: str, otp_code: str, channel: str) -> dict[str, str]:
-    provider = (os.getenv("OTP_PROVIDER") or "mock").lower()
-    if provider == "mock":
-        return {
-            "status": "mocked",
-            "provider_reference": f"mock-{phone_number[-4:]}",
-            "provider_message": f"Demo mode OTP for {channel}: {otp_code}",
-            "debug_otp": otp_code,
-        }
+def send_otp_via_provider(phone_number: str, otp_code: str, channel: str, email: str = "") -> dict[str, str]:
+    import smtplib
+    from email.mime.multipart import MIMEMultipart
+    from email.mime.text import MIMEText
+
+    gmail_user = os.getenv("GMAIL_USER", "").strip()
+    gmail_pass = os.getenv("GMAIL_APP_PASSWORD", "").strip()
+
+    if gmail_user and gmail_pass and email:
+        try:
+            msg = MIMEMultipart("alternative")
+            msg["From"] = f"AgroGyanGPT <{gmail_user}>"
+            msg["To"] = email
+            msg["Subject"] = "Your AgroGyanGPT Verification Code"
+
+            text_body = f"""Hello!
+
+Your OTP verification code for AgroGyanGPT is:
+
+{otp_code}
+
+This code is valid for 10 minutes. Do not share it with anyone.
+
+— AgroGyanGPT Team
+"""
+            html_body = f"""
+<div style="font-family:Arial,sans-serif;max-width:480px;margin:auto;padding:32px;border:1px solid #e0e0e0;border-radius:12px;">
+  <h2 style="color:#2e7d32;margin-bottom:8px;">AgroGyanGPT</h2>
+  <p style="color:#555;font-size:15px;">Your verification code is:</p>
+  <div style="font-size:38px;font-weight:bold;letter-spacing:10px;color:#1b5e20;background:#f1f8e9;padding:18px 24px;border-radius:8px;text-align:center;margin:20px 0;">
+    {otp_code}
+  </div>
+  <p style="color:#888;font-size:13px;">This code expires in <strong>10 minutes</strong>. Do not share it with anyone.</p>
+  <hr style="border:none;border-top:1px solid #eee;margin:24px 0;">
+  <p style="color:#aaa;font-size:12px;">AgroGyanGPT — Smart Agricultural Assistant</p>
+</div>
+"""
+            msg.attach(MIMEText(text_body, "plain"))
+            msg.attach(MIMEText(html_body, "html"))
+
+            with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+                server.login(gmail_user, gmail_pass)
+                server.sendmail(gmail_user, email, msg.as_string())
+
+            return {
+                "status": "sent",
+                "provider_reference": f"email-{email}",
+                "provider_message": f"OTP sent to {email} via email.",
+            }
+        except Exception as exc:
+            return {
+                "status": "mocked",
+                "provider_reference": "email-fallback",
+                "provider_message": f"Email failed ({exc}), using debug mode.",
+                "debug_otp": otp_code,
+            }
 
     return {
-        "status": "queued",
-        "provider_reference": f"{provider}-{phone_number[-4:]}",
-        "provider_message": f"OTP queued through {provider} over {channel}.",
+        "status": "mocked",
+        "provider_reference": f"mock-{phone_number[-4:]}",
+        "provider_message": f"Demo mode OTP for {channel}: {otp_code}",
+        "debug_otp": otp_code,
     }
 
 
@@ -659,7 +707,7 @@ def send_registration_otp(req: OtpSendRequest):
 
         otp_code = generate_otp()
         payload = req.model_dump()
-        provider_status = send_otp_via_provider(req.mobile_number, otp_code, req.otp_channel)
+        provider_status = send_otp_via_provider(req.mobile_number, otp_code, req.otp_channel, req.email)
 
         otp_session = OtpSession(
             phone_number=req.mobile_number,
